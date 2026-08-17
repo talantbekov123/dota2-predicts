@@ -11,6 +11,7 @@ node meta.js
 All other scripts read from this cache only.
 
 ## Player hero winrates
+## это косвенный индикатор "комфорта" на пике
 
 Show each player's tournament winrate on the hero they played in a match:
 

@@ -131,8 +131,8 @@ async function getTournamentHeroWinrates(leagueId, options = {}) {
 (async () => {
   const leagueId = 19719;
   const winrates = await getTournamentHeroWinrates(leagueId);
-  await getTournamentHeroWinrates(20009);
-  await getTournamentHeroWinrates(19785);
+  // await getTournamentHeroWinrates(20009); 1win essence
+  // await getTournamentHeroWinrates(19785); EWC 2026
 
   // Сортируем по числу пиков для удобного вывода
   const sorted = Object.values(winrates).sort((a, b) => b.picks - a.picks);

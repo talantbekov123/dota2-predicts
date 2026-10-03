@@ -48,21 +48,34 @@ async function getMatch(matchId, cache) {
 }
 
 /**
- * Считает винрейт героев по всем матчам турнира.
- * @param {number|string} leagueId - ID турнира (например, 19719)
+ * Считает винрейт героев по матчам одной или нескольких лиг.
+ * Все матчи пишутся в общий matches-cache.json.
+ *
+ * @param {number|string|Array<number|string>} leagueIds - ID турнира или массив ID
  * @param {object} [options]
  * @param {number} [options.delayMs=1000] - пауза между запросами к /matches/{id}
  * @param {boolean} [options.withNames=true] - подтягивать ли имена героев
  * @returns {Promise<Object>} объект { [hero_id]: { name, picks, wins, winrate } }
  */
-async function getTournamentHeroWinrates(leagueId, options = {}) {
+async function getTournamentHeroWinrates(leagueIds, options = {}) {
   const { delayMs = 1000, withNames = true } = options;
+  const ids = (Array.isArray(leagueIds) ? leagueIds : [leagueIds]).map(Number);
 
-  // 1. Получаем список матчей турнира
-  const matches = await fetchJson(`${BASE_URL}/leagues/${leagueId}/matches`);
-  const matchIds = matches.map(m => m.match_id);
+  if (ids.length === 0) {
+    throw new Error('Передай хотя бы один leagueId');
+  }
 
-  console.log(`Найдено матчей: ${matchIds.length}`);
+  // 1. Собираем match_id по всем лигам (уникальные)
+  const matchIdSet = new Set();
+  for (const leagueId of ids) {
+    const matches = await fetchJson(`${BASE_URL}/leagues/${leagueId}/matches`);
+    console.log(`Лига ${leagueId}: найдено матчей ${matches.length}`);
+    for (const m of matches) matchIdSet.add(m.match_id);
+    await delay(delayMs);
+  }
+
+  const matchIds = [...matchIdSet];
+  console.log(`Всего уникальных матчей: ${matchIds.length}`);
 
   // 2. Опционально получаем словарь hero_id -> имя
   let heroMap = {};
@@ -71,7 +84,7 @@ async function getTournamentHeroWinrates(leagueId, options = {}) {
     heroMap = Object.fromEntries(heroes.map(h => [h.id, h.localized_name]));
   }
 
-  // 3. Собираем статистику по каждому матчу (с кэшем на диске)
+  // 3. Собираем статистику по каждому матчу (один общий кэш на все лиги)
   const cache = loadMatchCache();
   const stats = {}; // { hero_id: { picks, wins } }
 
@@ -129,10 +142,14 @@ async function getTournamentHeroWinrates(leagueId, options = {}) {
 
 // Пример использования
 (async () => {
-  const leagueId = 19719;
-  const winrates = await getTournamentHeroWinrates(leagueId);
-  // await getTournamentHeroWinrates(20009); 1win essence
-  // await getTournamentHeroWinrates(19785); EWC 2026
+  // Заполни массив нужными лигами — кэш общий для всех
+  const leagueIds = [
+    19785, // EWC 2026
+    20009, // 1win essence
+    19719, // International 2026
+  ];
+
+  const winrates = await getTournamentHeroWinrates(leagueIds);
 
   // Сортируем по числу пиков для удобного вывода
   const sorted = Object.values(winrates).sort((a, b) => b.picks - a.picks);

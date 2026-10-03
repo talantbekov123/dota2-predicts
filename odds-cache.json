@@ -1,0 +1,90 @@
+{
+  "9026425519": {
+    "opendotaMatchId": 9026425519,
+    "provider": "oddspapi",
+    "radiant": "OG",
+    "dire": "BETBOOM TEAM",
+    "startTime": 1790968893,
+    "startTimeIso": "2026-10-02T19:21:33.000Z",
+    "minutesBefore": 20,
+    "fixture": {
+      "fixtureId": "id1604514775214558",
+      "participant1Id": 893607,
+      "participant2Id": 242386,
+      "participant1Name": "BetBoom Team",
+      "participant2Name": "OG",
+      "tournamentId": 45147,
+      "tournamentName": "BLAST Slam",
+      "startTime": "2026-10-02T17:00:00.000Z",
+      "trueStartTime": "2026-10-02T16:56:51.360Z",
+      "trueEndTime": "2026-10-02T20:39:52.524Z",
+      "statusName": "Finished",
+      "hasOdds": false,
+      "swappedSides": true,
+      "deltaSec": 8681.640000104904
+    },
+    "odds": {
+      "bookmaker": "pinnacle",
+      "marketId": 161,
+      "market": "moneyline",
+      "mode": "minutes_before_game_20",
+      "snapshotAt": "2026-10-02T19:01:31.956Z",
+      "targetAt": "2026-10-02T19:01:33.000Z",
+      "participant1": 1.222,
+      "participant2": 3.96,
+      "radiant": 3.96,
+      "dire": 1.222,
+      "impliedProb": {
+        "radiant": 0.2525,
+        "dire": 0.8183
+      }
+    },
+    "error": null,
+    "fetchedAt": "2026-10-03T11:26:50.696Z"
+  },
+  "9025934049": {
+    "opendotaMatchId": 9025934049,
+    "provider": "oddspapi",
+    "radiant": "Xtreme Gaming",
+    "dire": "LGD Gaming",
+    "startTime": 1790950179,
+    "startTimeIso": "2026-10-02T14:09:39.000Z",
+    "minutesBefore": 20,
+    "mode": "series",
+    "fixture": {
+      "fixtureId": "id1604514775188306",
+      "participant1Id": 769808,
+      "participant2Id": 300124,
+      "participant1Name": "Xtreme Gaming",
+      "participant2Name": "LGD Gaming",
+      "tournamentId": 45147,
+      "tournamentName": "BLAST Slam",
+      "startTime": "2026-10-02T13:00:00.000Z",
+      "trueStartTime": "2026-10-02T13:03:19.738Z",
+      "trueEndTime": "2026-10-02T16:38:01.084Z",
+      "statusName": "Finished",
+      "hasOdds": false,
+      "swappedSides": false,
+      "deltaSec": 3979.2620000839233
+    },
+    "odds": {
+      "bookmaker": "1xbet",
+      "marketId": 161,
+      "market": "moneyline",
+      "mode": "minutes_before_series_20",
+      "snapshotAt": "2026-10-02T12:18:08.353Z",
+      "targetAt": "2026-10-02T12:43:19.738Z",
+      "seriesStartAt": "2026-10-02T13:03:19.738Z",
+      "participant1": 2.794,
+      "participant2": 1.44,
+      "radiant": 2.794,
+      "dire": 1.44,
+      "impliedProb": {
+        "radiant": 0.3579,
+        "dire": 0.6944
+      }
+    },
+    "error": null,
+    "fetchedAt": "2026-10-03T11:32:30.609Z"
+  }
+}

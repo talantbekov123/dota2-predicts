@@ -1,0 +1,4 @@
+# Cache files
+matches-cache.json
+odds-cache.json
+*-cache.json

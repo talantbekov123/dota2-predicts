@@ -144,9 +144,11 @@ async function getTournamentHeroWinrates(leagueIds, options = {}) {
 (async () => {
   // Заполни массив нужными лигами — кэш общий для всех
   const leagueIds = [
-    19785, // EWC 2026
-    20009, // 1win essence
+    // 19785, // EWC 2026
+    // 20009, // 1win essence
     19719, // International 2026
+    20279, // PGL Wallachia 2026 Season 9"
+    19102, // BLAST SLAM VIII
   ];
 
   const winrates = await getTournamentHeroWinrates(leagueIds);

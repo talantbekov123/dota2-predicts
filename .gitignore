@@ -1,5 +1,7 @@
-# Cache files
+# Cache files and large match dumps
 odds-cache.json
 *-cache.json
 matches-cache.json
+matches-slim.json
+matches-short.json
 

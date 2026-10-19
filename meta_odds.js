@@ -21,14 +21,33 @@ const path = require('path');
 
 const MATCH_CACHE_PATH = path.join(__dirname, 'matches-cache.json');
 const ODDS_CACHE_PATH = path.join(__dirname, 'odds-cache.json');
+const TEAM_ALIAS_PATH = path.join(__dirname, 'team-aliases.json');
 
 const OPENDOTA_BASE = 'https://api.opendota.com/api';
 const ODDSPAPI_BASE = 'https://api.oddspapi.io/v4';
-const ODDSPAPI_KEY = '780fe6f7-6591-4bf0-a990-525844200b9e';
+// Можно временно переопределить другим ключом: ODDSPAPI_KEY=... node meta_odds.js
+const ODDSPAPI_KEY =
+  process.env.ODDSPAPI_KEY || '787ac7d0-4861-4333-9e92-6a968de18e53';
 
 const DOTA_SPORT_ID = 16; // esport-dota
-/** Букмекеры (historical-odds допускает max 3) */
-const BOOKMAKERS = ['1xbet'];
+/**
+ * Букмекеры в порядке приоритета.
+ *
+ * ВАЖНО: после апгрейда ключа 787ac7d0 подписка даёт доступ ровно к
+ * одному слагу — 'pinnacle+30' (это Pinnacle с модифицированной маржой,
+ * ОТДЕЛЬНЫЙ слаг от обычного 'pinnacle'!). Проверено через /account:
+ * active-подписка этого ключа содержит bookmakers:{"pinnacle+30":...}
+ * и больше ничего — ни 'pinnacle', ни '1xbet', ни 'bet365' этим ключом
+ * не открыты (раньше был отдельный free-план с доступом к 348 букмекерам,
+ * включая 1xbet, но после апгрейда он стал is_active:false).
+ * 'pinnacle' / '1xbet' / 'bet365' оставлены как fallback-кандидаты на
+ * случай смены подписки — restricted (403) по ним просто пропускается
+ * (см. fetchMergedByBookmaker), так что держать их в списке безвредно.
+ * Берём ПЕРВОГО букмекера, у которого нашлась цена — в odds-cache.json
+ * всегда попадает только один снимок на матч, без привязки к конкретному
+ * букмекеру.
+ */
+const BOOKMAKERS = ['pinnacle+30', 'pinnacle', '1xbet', 'bet365'];
 /** Moneyline 2-way для Dota (1 / 2) */
 const MONEYLINE_MARKET_ID = '161';
 const OUTCOME_HOME = '161';
@@ -102,8 +121,83 @@ async function oddspapiGet(pathname, params = {}) {
   return null;
 }
 
+/**
+ * Запрашивает /historical-odds или /odds по букмекерам ОТДЕЛЬНО (по одному),
+ * а не одним списком через запятую.
+ *
+ * Важно: если в одном запросе смешать разрешённый и запрещённый для
+ * подписки букмекер (например ['1xbet','pinnacle'] на тарифе, где открыт
+ * только 1xbet), OddsPapi отвечает 403 "Restricted bookmaker(s)" на ВЕСЬ
+ * запрос — даже для того букмекера, который реально разрешён. Поэтому
+ * тянем каждого букмекера отдельным запросом и просто пропускаем тех, кто
+ * вернул 403 (restricted) или 404 (нет данных), сливая результаты в один
+ * объект bookmakers/bookmakerOdds. Так можно безопасно добавлять новых
+ * букмекеров в BOOKMAKERS даже если текущая подписка их пока не открывает.
+ */
+async function fetchMergedByBookmaker(pathname, fixtureId, bookmakers, mergeKey) {
+  const merged = { fixtureId, [mergeKey]: {} };
+  let anyOk = false;
+  let allRestricted = true;
+  // bestErr — самая информативная ошибка среди всех попыток: не-403
+  // (напр. 404 "No historical odds found") важнее любого 403 restricted,
+  // потому что restricted просто означает "этот букмекер не из нашей
+  // подписки", а не-403 говорит, что у РАЗРЕШЁННОГО букмекера данных нет —
+  // это и есть реальная причина отказа, которую нужно показать пользователю.
+  // Раньше тут хранилась ошибка ПОСЛЕДНЕГО по порядку букмекера — если
+  // список заканчивался на заведомо restricted (bet365/1xbet), сообщение
+  // получалось "Restricted bookmaker(s)" даже когда у разрешённого
+  // букмекера был содержательный 404.
+  let bestErr = null;
+
+  for (let i = 0; i < bookmakers.length; i++) {
+    const bk = bookmakers[i];
+    try {
+      const data = await oddspapiGet(pathname, { fixtureId, bookmakers: bk });
+      if (data && data[mergeKey] && data[mergeKey][bk]) {
+        merged[mergeKey][bk] = data[mergeKey][bk];
+        anyOk = true;
+      }
+      // букмекер разрешён (запрос прошёл), просто данных не нашлось — не restricted
+      allRestricted = false;
+    } catch (err) {
+      if (err.status !== 403) {
+        allRestricted = false;
+        if (!bestErr || bestErr.status === 403) bestErr = err;
+      } else if (!bestErr) {
+        bestErr = err;
+      }
+    }
+    // нашли цену у букмекера с наивысшим приоритетом — дальше не идём
+    // (extractPrematchOdds/extractLiveOdds всё равно берут первого по порядку)
+    if (anyOk) break;
+    if (i < bookmakers.length - 1) await delay(HISTORICAL_DELAY_MS);
+  }
+
+  if (!anyOk) {
+    const err = new Error(
+      allRestricted
+        ? `oddspapi_all_bookmakers_restricted (${bookmakers.join(',')})`
+        : bestErr?.message || 'No data found.'
+    );
+    err.status = bestErr?.status;
+    err.allRestricted = allRestricted;
+    throw err;
+  }
+
+  return merged;
+}
+
+function teamAliases() {
+  return loadJson(TEAM_ALIAS_PATH, {});
+}
+
+function canonicalTeamName(name) {
+  const raw = String(name || '').trim();
+  return teamAliases()[raw] || raw;
+}
+
 function normalizeTeamName(name) {
-  return String(name || '')
+  return String(canonicalTeamName(name) || '')
     .toLowerCase()
     .replace(/[^a-z0-9а-яё]+/gi, ' ')
     .replace(/\b(team|esports|e sports|gaming|club|dota|dota2)\b/g, ' ')
@@ -278,6 +372,13 @@ function extractPrematchOdds(
       modeLabel = 'series_closing_prematch';
     }
 
+    // линия открылась уже после заявленного старта, но до первой карты
+    if ((!homeSnap || !awaySnap) && mode === 'series' && gameStartUnix) {
+      homeSnap = pickSnapshot(homeTl, gameStartUnix * 1000, true);
+      awaySnap = pickSnapshot(awayTl, gameStartUnix * 1000, true);
+      if (homeSnap && awaySnap) modeLabel = 'prematch_before_map';
+    }
+
     if (!homeSnap || !awaySnap) continue;
 
     const p1Odd = Number(homeSnap.price);
@@ -399,13 +500,18 @@ async function buildOddsEntry(opendotaMatchId, matchCache, options = {}) {
   base.fixture = fixture;
   await delay(FIXTURES_DELAY_MS);
 
-  try {
-    const hist = await oddspapiGet('/historical-odds', {
-      fixtureId: fixture.fixtureId,
-      bookmakers: BOOKMAKERS.join(','),
-    });
+  let odds = null;
+  let historicalErr = null;
+  let liveErr = null;
 
-    const odds = extractPrematchOdds(
+  try {
+    const hist = await fetchMergedByBookmaker(
+      '/historical-odds',
+      fixture.fixtureId,
+      BOOKMAKERS,
+      'bookmakers'
+    );
+    odds = extractPrematchOdds(
       hist,
       fixture,
       radiant,
@@ -414,27 +520,42 @@ async function buildOddsEntry(opendotaMatchId, matchCache, options = {}) {
       minutesBefore,
       mode
     );
+  } catch (err) {
+    // historical-odds не нашлись (404) или все букмекеры restricted (403) —
+    // не выходим сразу, всё равно пробуем live /odds ниже (матч мог быть
+    // ещё не начат, и там может быть текущая линия)
+    historicalErr = err;
+  }
 
-    if (odds) {
-      base.odds = odds;
-      return base;
-    }
+  if (odds) {
+    base.odds = odds;
+    return base;
+  }
 
-    // fallback на текущие коэфы
+  // fallback на текущие коэфы
+  try {
     await delay(1500);
-    const live = await oddspapiGet('/odds', {
-      fixtureId: fixture.fixtureId,
-      bookmakers: BOOKMAKERS.join(','),
-    });
+    const live = await fetchMergedByBookmaker(
+      '/odds',
+      fixture.fixtureId,
+      BOOKMAKERS,
+      'bookmakerOdds'
+    );
     const liveOdds = extractLiveOdds(live, fixture, radiant);
     if (liveOdds) {
       base.odds = liveOdds;
       return base;
     }
-
-    base.error = 'odds_snapshot_not_found';
   } catch (err) {
-    base.error = `odds_fetch_failed: ${err.message}`;
+    liveErr = err;
+  }
+
+  if (historicalErr) {
+    base.error = `odds_fetch_failed: ${historicalErr.message}`;
+  } else if (liveErr) {
+    base.error = `odds_fetch_failed: ${liveErr.message}`;
+  } else {
+    base.error = 'odds_snapshot_not_found';
   }
 
   return base;

@@ -10,6 +10,18 @@ node meta.js
 
 All other scripts read from this cache only.
 
+## Last 5 tournaments
+
+These are the five leagues in the latest OpenDota pro matches. Full matches are in `matches-cache.json`. Match ids, newest first, are in the text files.
+
+| League | Name | Matches | Ids |
+|---|---|---|---|
+| 19944 | EPL Masters 2026 | 424 | `epl-masters-matches.txt` |
+| 20411 | 奇迹杯 | 12 | `qiji-cup-matches.txt` |
+| 20334 | NEXUS SERIES II | 17 | `nexus-series-ii-matches.txt` |
+| 20406 | 1win Streamers League #3 | 60 | `1win-streamers-league-3-matches.txt` |
+| 20359 | DreamLeague Season 30 Qualifiers | 288 | `dreamleague-s30-qualifiers-matches.txt` |
+
 ## Player hero winrates
 ## это косвенный индикатор "комфорта" на пике
 

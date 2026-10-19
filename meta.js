@@ -4,6 +4,25 @@ const path = require('path');
 const BASE_URL = 'https://api.opendota.com/api';
 const MATCH_CACHE_PATH = path.join(__dirname, 'matches-cache.json');
 
+// leagueid в OpenDota для турниров (сверено через /leagues и /explorer по датам)
+const LEAGUE_IDS = {
+  19917: 'Games of the Future 2026', // OpenDota: "The Games of the Future 2026"
+  19656: '1win Essence I',
+  19255: 'PREMIER SERIES', // OpenDota: "Premier Series"
+  19290: 'DreamLeague Division 2 Season 3',
+  19575: 'ESL Challenger China Season 2', // OpenDota: "ESL challenger China powered By ACL" (апр-май 2026; season 1 = 19130, янв-фев 2026)
+  19239: 'FISSURE Universe: Episode 8', // OpenDota: "FISSURE Universe Episode 8"
+  20009: '1win Essence II',
+  19785: 'Esports World Cup 2026',
+  19101: 'BLAST SLAM VII',
+  19696: 'DreamLeague Season 29',
+  19543: 'PGL Wallachia Season 8', // OpenDota: "PGL Wallachia 2026 Season 8"
+  19422: 'ESL One Birmingham 2026',
+  19435: 'PGL Wallachia Season 7', // OpenDota: "PGL Wallachia 2026 Season 7"
+  19269: 'DreamLeague Season 28',
+  19099: 'BLAST SLAM VI',
+};
+
 // Небольшая пауза между запросами, чтобы не упереться в rate limit (60 req/min на free-тарифе)
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -53,12 +72,12 @@ async function getMatch(matchId, cache) {
  *
  * @param {number|string|Array<number|string>} leagueIds - ID турнира или массив ID
  * @param {object} [options]
- * @param {number} [options.delayMs=1000] - пауза между запросами к /matches/{id}
+ * @param {number} [options.delayMs=500] - пауза между запросами к /matches/{id}
  * @param {boolean} [options.withNames=true] - подтягивать ли имена героев
  * @returns {Promise<Object>} объект { [hero_id]: { name, picks, wins, winrate } }
  */
 async function getTournamentHeroWinrates(leagueIds, options = {}) {
-  const { delayMs = 1000, withNames = true } = options;
+  const { delayMs = 500, withNames = true } = options;
   const ids = (Array.isArray(leagueIds) ? leagueIds : [leagueIds]).map(Number);
 
   if (ids.length === 0) {
@@ -146,9 +165,11 @@ async function getTournamentHeroWinrates(leagueIds, options = {}) {
   const leagueIds = [
     // 19785, // EWC 2026
     // 20009, // 1win essence
-    19719, // International 2026
-    20279, // PGL Wallachia 2026 Season 9"
-    19102, // BLAST SLAM VIII
+    // 19719, // International 2026
+    // 20279, // PGL Wallachia 2026 Season 9"
+    // 19102, // BLAST SLAM VIII
+    20359, // DreamLeague Season 30 Qualifiers 
+    19944, // EPL Masters 2026
   ];
 
   const winrates = await getTournamentHeroWinrates(leagueIds);

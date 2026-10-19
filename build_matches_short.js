@@ -81,6 +81,13 @@ function main() {
     short[id] = row;
   }
 
+  for (const [id, full] of Object.entries(cache)) {
+    if (short[id] || !full) continue;
+    const row = shortenMatch(full, full);
+    if (row.picks_bans.length > 0) withDraft += 1;
+    short[id] = row;
+  }
+
   fs.writeFileSync(OUT_PATH, JSON.stringify(short));
   console.log(
     `Wrote ${Object.keys(short).length} matches (${withDraft} with picks/bans) to ${OUT_PATH}`
